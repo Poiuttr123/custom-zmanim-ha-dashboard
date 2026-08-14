@@ -12,6 +12,7 @@ import homeassistant.util.dt as dt_util
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import slugify
 
 from .const import ATTR_SIZE_WARNING_BYTES, DOMAIN, REQUIRED_COLUMNS
 
@@ -36,6 +37,9 @@ def parse_zmanim_csv(csv_text: str) -> dict[str, Any]:
         raise ValueError(f"missing_columns: {', '.join(missing)}")
 
     days: dict[str, dict[str, Any]] = {}
+    # Flat map of individually-addressable zmanim, keyed by the optional `Key`
+    # column (slugified). Powers the per-item `sensor.shul_zmanim_<key>` sensors.
+    items: dict[str, dict[str, Any]] = {}
     week_title = ""
     row_count = 0
 
@@ -50,6 +54,20 @@ def parse_zmanim_csv(csv_text: str) -> dict[str, Any]:
             _LOGGER.warning("Skipping row %s: missing Day or Zman", index)
             continue
 
+        # Optional stable key -> its own sensor. Slugified so it is a valid
+        # entity-id suffix; a Hebrew/empty key slugifies away and is ignored.
+        key = slugify((row.get("Key") or "").strip())
+
+        zman = {
+            "name": zman_name,
+            "time": (row.get("Time") or "").strip(),
+            "notes": (row.get("Notes") or "").strip(),
+            # Optional per-row icon override (an mdi name like "mdi:candle").
+            # Blank is fine - the card auto-picks an icon from the name.
+            "icon": (row.get("Icon") or "").strip(),
+            "key": key,
+        }
+
         day = days.setdefault(
             day_label,
             {
@@ -58,24 +76,21 @@ def parse_zmanim_csv(csv_text: str) -> dict[str, Any]:
                 "zmanim": [],
             },
         )
-
-        day["zmanim"].append(
-            {
-                "name": zman_name,
-                "time": (row.get("Time") or "").strip(),
-                "notes": (row.get("Notes") or "").strip(),
-                # Optional per-row icon override (an mdi name like "mdi:candle").
-                # Blank is fine - the card auto-picks an icon from the name.
-                "icon": (row.get("Icon") or "").strip(),
-            }
-        )
+        day["zmanim"].append(zman)
         row_count += 1
+
+        if key:
+            if key in items:
+                _LOGGER.warning("Skipping duplicate Key '%s' on row %s", key, index)
+            else:
+                items[key] = {**zman, "day_label": day_label}
 
     sorted_days = sorted(days.values(), key=lambda d: d["day_order"])
 
     return {
         "week_title": week_title,
         "days": sorted_days,
+        "items": items,
         "row_count": row_count,
         "last_updated": dt_util.utcnow().isoformat(),
     }

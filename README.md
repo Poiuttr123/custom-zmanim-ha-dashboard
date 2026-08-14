@@ -57,6 +57,7 @@ One row per zman. The header row must contain exactly these column names:
 | `Time`   | Yes       | Free text, e.g. `8:12 PM`. Shown exactly as typed.                |
 | `Notes`  | Optional  | Small note under the row, e.g. `Followed by Kiddush`.             |
 | `Icon`   | Optional  | Override the auto-picked icon for this row with any [Material Design Icon](https://pictogrammers.com/library/mdi/) name, e.g. `mdi:candle`. Leave blank to let the card choose. |
+| `Key`    | Optional  | Give a row a stable key (Latin letters/numbers/underscores, e.g. `shacharis`) to also expose it as its own sensor — see [Per-item sensors](#per-item-sensors). Leave blank for rows you don't need individually. |
 | `WeekTitle` | Optional | Fill in on just one row (e.g. the first). Shown as the card's title, e.g. `Parshas Balak`. Leave blank if you don't want a title. |
 
 That's it — **no order columns to fill in.** The order you type rows in is
@@ -163,6 +164,53 @@ your own comma-separated keywords:
 
 ```yaml
 highlight: רבי,עמוד,rebbi
+```
+
+## Per-item sensors
+
+Besides the master `sensor.shul_zmanim`, you can expose **individual zmanim as
+their own sensors** so you can drop them into any custom card (Mushroom,
+button-card, a plain entities row, templates, etc.).
+
+Give a row a **`Key`** in the sheet — a short, stable identifier using Latin
+letters, numbers, and underscores:
+
+| Day          | Zman            | Time    | Key             | WeekTitle     |
+|--------------|------------------|---------|-----------------|---------------|
+| ערב שבת      | הדלקת נרות        | 8:07    | candle_lighting | פרשת בלק      |
+| שבת קודש     | שחרית            | 11:00   | shacharis       |               |
+| שבת קודש     | זמן מוצאי שב״ק    | 9:48    | shabbos_ends    |               |
+
+Each keyed row becomes a sensor named `sensor.shul_zmanim_<key>`, e.g.
+`sensor.shul_zmanim_shacharis`. The sensor's **state is the zman's name**, and
+the details are attributes:
+
+- `time` — the time text (e.g. `11:00`)
+- `notes` — the row's note, if any
+- `day` — the day heading it's under
+- `icon` — the row's icon, if you set one
+- `key` — the key itself
+
+The entity id comes from the **Key**, so it stays the same even if you rename
+the zman or reorder rows week to week. On a week where you don't include that
+row, the sensor simply goes *unavailable* (it isn't deleted), so cards
+referencing it don't break.
+
+Rows without a `Key` are unchanged — they still appear in the card; they just
+don't get their own sensor. Use **Latin letters, numbers, and underscores** for
+predictable ids (a Hebrew key still works but gets transliterated into something
+like `shkhryt`, which is harder to predict). Each key should be unique —
+duplicates are skipped.
+
+### Example: showing one item in a custom card
+
+```yaml
+type: entities
+entities:
+  - entity: sensor.shul_zmanim_shacharis
+    secondary_info: last-changed
+# The time lives in the `time` attribute, e.g. in a markdown card:
+# {{ state_attr('sensor.shul_zmanim_shacharis', 'time') }}
 ```
 
 ## Updating the sheet each week
