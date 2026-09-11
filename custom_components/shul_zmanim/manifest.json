@@ -1,12 +1,14 @@
 {
   "domain": "shul_zmanim",
   "name": "Shul Zmanim",
-  "codeowners": ["@yb460"],
+  "codeowners": [
+    "@yb460"
+  ],
   "config_flow": true,
-  "documentation": "https://github.com/yb460/custom-zmanim-ha-dashboard",
+  "documentation": "https://github.com/Poiuttr123/custom-zmanim-ha-dashboard",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/yb460/custom-zmanim-ha-dashboard/issues",
+  "issue_tracker": "https://github.com/Poiuttr123/custom-zmanim-ha-dashboard/issues",
   "requirements": [],
-  "version": "1.0.12"
+  "version": "1.1.0"
 }

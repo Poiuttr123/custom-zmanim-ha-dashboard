@@ -75,6 +75,7 @@ class ShulZmanimSensor(CoordinatorEntity[ShulZmanimCoordinator], SensorEntity):
         return {
             "days": self.coordinator.data.get("days", []),
             "row_count": self.coordinator.data.get("row_count", 0),
+            "expired_count": self.coordinator.data.get("expired_count", 0),
             "last_updated": self.coordinator.data.get("last_updated"),
         }
 
@@ -85,7 +86,8 @@ class ShulZmanimItemSensor(CoordinatorEntity[ShulZmanimCoordinator], SensorEntit
     State is the zman's name; the time, notes, day, and icon are attributes.
     The entity id comes from the Key (not the Hebrew name) so it stays stable
     across weekly edits, and the entity persists (as unavailable) on weeks the
-    item isn't posted so cards referencing it don't break.
+    item isn't posted so cards referencing it don't break. A row past its
+    remove-by is dropped upstream, so it goes unavailable the same way.
     """
 
     _attr_has_entity_name = False
@@ -142,4 +144,5 @@ class ShulZmanimItemSensor(CoordinatorEntity[ShulZmanimCoordinator], SensorEntit
             "notes": item.get("notes", ""),
             "day": item.get("day_label", ""),
             "icon": item.get("icon", ""),
+            "remove_by": item.get("remove_by", ""),
         }
